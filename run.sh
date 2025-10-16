@@ -1,5 +1,5 @@
-#!/usr/bin/env zsh
-# Simple launcher for the test-tag-editor project (macOS / zsh)
+#!/usr/bin/env bash
+# Simple launcher for the test-tag-editor project
 # Usage: ./run.sh [command]
 # Commands: dev (default), build, preview, install, test, help
 
