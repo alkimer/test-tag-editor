@@ -1,4 +1,4 @@
-import create from 'zustand'
+import { create } from 'zustand'
 import { Tag, EditorState } from './types'
 
 type Store = EditorState & {
@@ -35,13 +35,6 @@ const defaultTag = (i = 0): Tag => ({
   zIndex: i,
 })
 
-// Shallow snapshot helper
-const snapshot = (s: EditorState) => ({
-  imageUrl: s.imageUrl,
-  imageNaturalSize: s.imageNaturalSize,
-  tags: s.tags,
-})
-
 export const useEditorStore = create<Store>((set, get) => ({
   imageUrl: null,
   imageNaturalSize: null,
@@ -54,7 +47,7 @@ export const useEditorStore = create<Store>((set, get) => ({
   setStageRef: (r: any) => set({ stageRef: r }),
 
   setImage: (url, natural = null) => {
-    set((s) => ({ imageUrl: url, imageNaturalSize: natural }))
+    set({ imageUrl: url, imageNaturalSize: natural })
     // clear selection
     set({ selectedIds: [] })
   },

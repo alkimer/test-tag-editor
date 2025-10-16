@@ -1,7 +1,7 @@
 import React, { useRef } from 'react'
 import useEditorStore from '../useEditorStore'
 import { stageToPng } from '../../Export/exportImage'
-import { saveAs } from '../../lib/format'
+import { saveAs } from '../../../lib/format'
 
 export default function CanvasToolbar() {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
