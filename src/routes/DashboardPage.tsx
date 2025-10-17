@@ -1,8 +1,7 @@
 import React from 'react'
-import LineChartCard from '../components/Charts/LineChartCard'
+import InteractiveMultiCurveChart from '../components/Charts/InteractiveMultiCurveChart'
 import PieChartCard from '../components/Charts/PieChartCard'
 import exportReportPdf from '../components/Export/exportPdf'
-import useEditorStore from '../components/EditorCanvas/useEditorStore'
 
 export default function DashboardPage() {
   const editorPng = null // optionally could get snapshot
@@ -14,14 +13,27 @@ export default function DashboardPage() {
   }
 
   return (
-    <div>
-      <h2>Dashboard</h2>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <LineChartCard />
+    <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+      <h2 style={{ color: '#333', marginBottom: '20px' }}>📊 Analytics Dashboard</h2>
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20 }}>
+        <InteractiveMultiCurveChart />
         <PieChartCard />
       </div>
-      <div style={{ marginTop: 12 }}>
-        <button onClick={onExport}>Export dashboard as PDF</button>
+      <div style={{ marginTop: 20 }}>
+        <button 
+          onClick={onExport}
+          style={{
+            fontSize: '14px',
+            padding: '8px 16px',
+            backgroundColor: '#2196F3',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: 'pointer'
+          }}
+        >
+          📄 Export Dashboard as PDF
+        </button>
       </div>
     </div>
   )

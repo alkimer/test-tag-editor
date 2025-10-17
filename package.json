@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "vitest"
+    "test": "node --experimental-vm-modules ./node_modules/vitest/vitest.mjs run --reporter=verbose src/tests/interactive-charts.spec.tsx"
   },
   "dependencies": {
     "html2canvas": "^1.4.1",
@@ -26,6 +26,7 @@
     "@types/react": "^18.2.28",
     "@types/react-dom": "^18.2.8",
     "@vitejs/plugin-react": "^4.3.4",
+    "jsdom": "^27.0.0",
     "typescript": "^5.7.2",
     "vite": "^6.0.7",
     "vitest": "^1.0.0"
