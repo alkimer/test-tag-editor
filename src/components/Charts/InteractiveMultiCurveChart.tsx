@@ -1,25 +1,53 @@
 import React, { useState, useRef, useCallback, useMemo } from 'react'
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts'
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Legend, CartesianGrid } from 'recharts'
 import { domToPng } from '../Export/domToPng'
 
-// Gaussian interpolation function
+// Interpolation types
+type InterpolationType = 'gaussian' | 'linear' | 'constant'
+
+// Interpolation functions
 const gaussianKernel = (distance: number, sigma: number = 2.0): number => {
   return Math.exp(-(distance * distance) / (2 * sigma * sigma))
 }
 
-const applyGaussianSmoothing = (data: number[], changedIndex: number, newValue: number, radius: number = 5): number[] => {
+const linearKernel = (distance: number): number => {
+  return Math.max(0, 1 - distance)
+}
+
+const constantKernel = (distance: number, radius: number): number => {
+  return distance <= radius ? 1 : 0
+}
+
+const applyInterpolation = (
+  data: number[], 
+  changedIndex: number, 
+  newValue: number, 
+  radius: number,
+  interpolationType: InterpolationType
+): number[] => {
   const result = [...data]
   result[changedIndex] = newValue
   
-  // Apply gaussian smoothing to neighbors
+  // Apply interpolation to neighbors based on type
   for (let i = Math.max(0, changedIndex - radius); i <= Math.min(data.length - 1, changedIndex + radius); i++) {
     if (i === changedIndex) continue
     
     const distance = Math.abs(i - changedIndex)
-    const weight = gaussianKernel(distance, 2.5)
-    const oldValue = data[i]
+    let weight = 0
     
-    // Blend between old value and influence from changed point
+    switch (interpolationType) {
+      case 'gaussian':
+        weight = gaussianKernel(distance, 2.5)
+        break
+      case 'linear':
+        weight = linearKernel(distance / radius)
+        break
+      case 'constant':
+        weight = constantKernel(distance, radius)
+        break
+    }
+    
+    const oldValue = data[i]
     const influence = (newValue - data[changedIndex]) * weight * 0.25
     result[i] = Math.max(0, Math.min(200, oldValue + influence))
   }
@@ -50,19 +78,19 @@ export default function InteractiveMultiCurveChart() {
   const [curves, setCurves] = useState<CurveData[]>([
     {
       id: 'curve1',
-      name: 'Revenue 💰',
+      name: 'Sensor 1 �',
       color: '#8884d8',
       data: generateMockCurve(1, 80, 0.08)
     },
     {
       id: 'curve2', 
-      name: 'Expenses 💸',
+      name: 'Sensor 2 �',
       color: '#82ca9d',
       data: generateMockCurve(2, 60, 0.12)
     },
     {
       id: 'curve3',
-      name: 'Profit 📈',
+      name: 'Sensor 3 �',
       color: '#ffc658',
       data: generateMockCurve(3, 40, 0.15)
     }
@@ -70,6 +98,18 @@ export default function InteractiveMultiCurveChart() {
   
   const [isDragging, setIsDragging] = useState(false)
   const [selectedPoint, setSelectedPoint] = useState<{
+    curveId: string | null
+    pointIndex: number | null
+  }>({
+    curveId: null,
+    pointIndex: null
+  })
+
+  // Configuration states
+  const [interpolationType, setInterpolationType] = useState<InterpolationType>('gaussian')
+  const [interpolationRadius, setInterpolationRadius] = useState(8)
+  const [showHoverPoints, setShowHoverPoints] = useState(false)
+  const [hoveredPoint, setHoveredPoint] = useState<{
     curveId: string | null
     pointIndex: number | null
   }>({
@@ -137,18 +177,19 @@ export default function InteractiveMultiCurveChart() {
     setCurves(prevCurves => 
       prevCurves.map(curve => {
         if (curve.id === selectedPoint.curveId) {
-          const newData = applyGaussianSmoothing(
+          const newData = applyInterpolation(
             curve.data,
             selectedPoint.pointIndex!,
             newValue,
-            8
+            interpolationRadius,
+            interpolationType
           )
           return { ...curve, data: newData }
         }
         return curve
       })
     )
-  }, [isDragging, selectedPoint])
+  }, [isDragging, selectedPoint, interpolationRadius, interpolationType])
 
   // Handle mouse up to stop dragging
   const handleMouseUp = useCallback(() => {
@@ -175,19 +216,19 @@ export default function InteractiveMultiCurveChart() {
     setCurves([
       {
         id: 'curve1',
-        name: 'Revenue 💰',
+        name: 'Sensor 1 �',
         color: '#8884d8',
         data: generateMockCurve(1, 80, 0.08)
       },
       {
         id: 'curve2',
-        name: 'Expenses 💸', 
+        name: 'Sensor 2 �', 
         color: '#82ca9d',
         data: generateMockCurve(2, 60, 0.12)
       },
       {
         id: 'curve3',
-        name: 'Profit 📈',
+        name: 'Sensor 3 �',
         color: '#ffc658',
         data: generateMockCurve(3, 40, 0.15)
       }
@@ -203,16 +244,67 @@ export default function InteractiveMultiCurveChart() {
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
     >
-      <h4 style={{ margin: '0 0 8px 0', color: '#333' }}>📈 Interactive Multi-Curve Dashboard</h4>
+      <h4 style={{ margin: '0 0 8px 0', color: '#333' }}>� Interactive Sensor Dashboard</h4>
       <p style={{ fontSize: '11px', color: '#666', margin: '0 0 12px 0', fontStyle: 'italic' }}>
-        🖱️ Click on any point in the chart to select it and drag to modify curves • ✨ Gaussian smoothing applied automatically
+        🖱️ Hover over curves to see points • Click and drag to modify • Configurable interpolation
       </p>
+      
+      {/* Configuration Controls */}
+      <div style={{ marginBottom: 16, display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <label style={{ fontSize: '12px', fontWeight: 'bold' }}>Interpolation:</label>
+          <select 
+            value={interpolationType}
+            onChange={(e) => setInterpolationType(e.target.value as InterpolationType)}
+            style={{ fontSize: '11px', padding: '4px 8px', borderRadius: '4px', border: '1px solid #ccc' }}
+          >
+            <option value="gaussian">Gaussian</option>
+            <option value="linear">Linear</option>
+            <option value="constant">Constant</option>
+          </select>
+        </div>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <label style={{ fontSize: '12px', fontWeight: 'bold' }}>Radius:</label>
+          <input
+            type="range"
+            min="1"
+            max="15"
+            value={interpolationRadius}
+            onChange={(e) => setInterpolationRadius(Number(e.target.value))}
+            style={{ width: '80px' }}
+          />
+          <span style={{ fontSize: '11px', color: '#666' }}>{interpolationRadius}</span>
+        </div>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <label style={{ fontSize: '12px' }}>
+            <input
+              type="checkbox"
+              checked={showHoverPoints}
+              onChange={(e) => setShowHoverPoints(e.target.checked)}
+            />
+            Show hover points
+          </label>
+        </div>
+      </div>
       
       <ResponsiveContainer width="100%" height={350}>
         <LineChart 
           data={chartData} 
           margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
           onClick={handleChartClick}
+          onMouseMove={(data) => {
+            if (data && data.activeLabel !== undefined && showHoverPoints) {
+              setHoveredPoint({
+                curveId: null, // Will be determined by click
+                pointIndex: Number(data.activeLabel)
+              })
+            }
+          }}
+          onMouseLeave={() => {
+            setHoveredPoint({ curveId: null, pointIndex: null })
+          }}
         >
           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
           <XAxis 
@@ -225,29 +317,6 @@ export default function InteractiveMultiCurveChart() {
             domain={[0, 200]}
             tick={{ fontSize: 12 }}
           />
-          <Tooltip 
-            content={({ active, payload, label }) => {
-              if (active && payload && payload.length) {
-                return (
-                  <div style={{ 
-                    backgroundColor: 'white', 
-                    border: '1px solid #ccc', 
-                    borderRadius: '4px', 
-                    padding: '8px',
-                    fontSize: '12px'
-                  }}>
-                    <p>{`Point: ${label}`}</p>
-                    {payload.map((entry, index) => (
-                      <p key={index} style={{ color: entry.color }}>
-                        {`${curves.find(c => c.id === entry.dataKey)?.name}: ${entry.value?.toFixed(1)}`}
-                      </p>
-                    ))}
-                  </div>
-                )
-              }
-              return null
-            }}
-          />
           <Legend />
           
           {curves.map(curve => (
@@ -258,20 +327,81 @@ export default function InteractiveMultiCurveChart() {
               stroke={curve.color}
               strokeWidth={4}
               dot={false}
-              activeDot={{
-                r: selectedPoint.curveId === curve.id ? 8 : 0,
-                fill: curve.color,
-                stroke: 'white',
-                strokeWidth: 3,
-                style: { 
-                  cursor: 'grab',
-                  filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.3))'
-                }
-              }}
+              activeDot={false}
               name={curve.name}
               connectNulls={false}
             />
           ))}
+          
+          {/* Custom hover/selected points */}
+          {showHoverPoints && hoveredPoint.pointIndex !== null && (
+            <g>
+              {curves.map(curve => {
+                const value = curve.data[hoveredPoint.pointIndex!]
+                if (value === undefined) return null
+                
+                // Calculate position (simplified - would need proper scaling)
+                const x = (hoveredPoint.pointIndex! / 99) * 100 // percentage
+                const y = (1 - value / 200) * 100 // inverted percentage
+                
+                return (
+                  <circle
+                    key={`hover-${curve.id}`}
+                    cx={`${x}%`}
+                    cy={`${y}%`}
+                    r={6}
+                    fill={curve.color}
+                    stroke="white"
+                    strokeWidth={2}
+                    style={{ 
+                      cursor: 'pointer',
+                      filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))',
+                      opacity: 0.7
+                    }}
+                    onClick={() => {
+                      setSelectedPoint({
+                        curveId: curve.id,
+                        pointIndex: hoveredPoint.pointIndex
+                      })
+                      setIsDragging(true)
+                    }}
+                  />
+                )
+              })}
+            </g>
+          )}
+          
+          {/* Selected point */}
+          {selectedPoint.curveId && selectedPoint.pointIndex !== null && (
+            <g>
+              {(() => {
+                const curve = curves.find(c => c.id === selectedPoint.curveId)
+                if (!curve) return null
+                
+                const value = curve.data[selectedPoint.pointIndex]
+                if (value === undefined) return null
+                
+                // Calculate position (simplified)
+                const x = (selectedPoint.pointIndex / 99) * 100
+                const y = (1 - value / 200) * 100
+                
+                return (
+                  <circle
+                    cx={`${x}%`}
+                    cy={`${y}%`}
+                    r={8}
+                    fill={curve.color}
+                    stroke="white"
+                    strokeWidth={3}
+                    style={{ 
+                      cursor: 'grab',
+                      filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.3))'
+                    }}
+                  />
+                )
+              })()}
+            </g>
+          )}
         </LineChart>
       </ResponsiveContainer>
       
